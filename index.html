@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kids Check-In</title>
+
+<style>
+:root {
+  --bg: #f4f6fb;
+  --card: #ffffff;
+  --primary: #2563eb;
+  --primary-dark: #1e40af;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: #111827;
+}
+
+header {
+  padding: 30px 20px 20px;
+  text-align: center;
+}
+
+header h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+header p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto 40px;
+  padding: 0 16px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.06);
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+input, select, button, summary {
+  width: 100%;
+  padding: 12px 14px;
+  margin-top: 10px;
+  font-size: 15px;
+  border-radius: 12px;
+}
+
+input, select {
+  border: 1px solid var(--border);
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+button {
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.primary { background: var(--primary); color: white; }
+.primary:hover { background: var(--primary-dark); }
+.success { background: var(--success); color: white; }
+.danger { background: var(--danger); color: white; }
+
+.list { margin-top: 10px; }
+
+.child {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px;
+  border-radius: 14px;
+  background: #f9fafb;
+  margin-bottom: 8px;
+}
+
+.child small { color: var(--muted); }
+
+.actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.in { background: #dcfce7; color: #166534; }
+.out { background: #fee2e2; color: #991b1b; }
+
+.icon-btn { padding: 8px 10px; font-size: 14px; }
+
+summary {
+  list-style: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+summary::-webkit-details-marker { display: none; }
+
+footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 20px;
+}
+</style>
+</head>
+
+<body>
+<header>
+  <h1>Welcome! We are so glad you are here!</h1>
+  <p>Please check your child in below</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <h2>Search & Check-In</h2>
+    <input id="search" placeholder="Search child name…" oninput="renderList()" />
+    <div id="list" class="list"></div>
+  </div>
+
+  <details class="card">
+    <summary>✨ First Time? Fill out this information below</summary>
+    <input id="gChild" placeholder="Child Name" />
+    <input id="gParent" placeholder="Parent Name" />
+    <input id="gPhone" placeholder="Phone" />
+
+    <select id="gAge">
+      <option value="">Select Age</option>
+      <option>2–3</option>
+      <option>4–5</option>
+      <option>K–1st</option>
+      <option>2nd–3rd</option>
+      <option>4th–5th</option>
+    </select>
+
+    <select id="gClass">
+      <option value="">Select Class</option>
+      <option>Nursery</option>
+      <option>Preschool</option>
+      <option>Elementary</option>
+    </select>
+
+    <button class="primary" onclick="addGuest()">Guest Check-In</button>
+  </details>
+
+  <details class="card">
+    <summary>🔒 Admin Tools</summary>
+
+    <h2 style="margin-top:12px;">Add Returning Child</h2>
+    <input id="childName" placeholder="Child Name" />
+    <input id="parentName" placeholder="Parent Name" />
+    <button class="primary" onclick="addChild()">Add Child</button>
+
+    <hr style="margin:16px 0; border:none; border-top:1px solid var(--border);">
+
+    <button class="success" onclick="exportCSV()">Export Week (CSV)</button>
+    <button class="danger" onclick="resetDay()">Reset Today</button>
+  </details>
+
+  <footer>
+    Grace Kids • Safe • Secure • Loved
+  </footer>
+</div>
+
+<script>
+let kids = JSON.parse(localStorage.getItem("kids")) || [];
+let today = new Date().toDateString();
+
+if (localStorage.getItem("lastDate") !== today) {
+  kids.forEach(k => k.checkedIn = false);
+  localStorage.setItem("lastDate", today);
+  save();
+}
+
+function save() {
+  localStorage.setItem("kids", JSON.stringify(kids));
+}
+
+function renderList() {
+  const q = document.getElementById("search").value.toLowerCase();
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  kids.filter(k => k.child.toLowerCase().includes(q))
+      .forEach((k, i) => {
+        const div = document.createElement("div");
+        div.className = "child";
+        div.innerHTML = `
+          <div>
+            <strong>${k.child}</strong><br />
+            <small>${k.parent || 'Guest'} • ${k.class || ''}</small>
+          </div>
+          <div class="actions">
+            <span class="badge ${k.checkedIn ? 'in' : 'out'}">${k.checkedIn ? 'IN' : 'OUT'}</span>
+            <button class="primary icon-btn" onclick="toggle(${i})">${k.checkedIn ? 'Out' : 'In'}</button>
+            <button class="danger icon-btn" onclick="removeKid(${i})">✕</button>
+          </div>`;
+        list.appendChild(div);
+      });
+}
+
+function addChild() {
+  if (!childName.value) return;
+  kids.push({ child: childName.value, parent: parentName.value, checkedIn: false, date: today });
+  save(); renderList();
+  childName.value = parentName.value = "";
+}
+
+function addGuest() {
+  kids.push({
+    child: gChild.value,
+    parent: gParent.value,
+    phone: gPhone.value,
+    age: gAge.value,
+    class: gClass.value,
+    guest: true,
+    checkedIn: true,
+    date: today
+  });
+  save(); renderList();
+  gChild.value = gParent.value = gPhone.value = "";
+  gAge.value = gClass.value = "";
+}
+
+function toggle(i) { kids[i].checkedIn = !kids[i].checkedIn; save(); renderList(); }
+function removeKid(i) { if (confirm("Remove this child?")) { kids.splice(i,1); save(); renderList(); } }
+function resetDay() { if (confirm("Reset all check-ins for today?")) { kids.forEach(k=>k.checkedIn=false); save(); renderList(); } }
+
+function exportCSV() {
+  let csv = "Child,Parent,Phone,Age,Class,Guest,Checked In,Date\n";
+  kids.forEach(k => csv += `"${k.child}","${k.parent||''}","${k.phone||''}","${k.age||''}","${k.class||''}","${k.guest||false}","${k.checkedIn}","${k.date}"\n`);
+  const blob = new Blob([csv], {type:"text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "kids_checkin.csv";
+  a.click();
+}
+
+renderList();
+</script>
+</body>
+</html>
